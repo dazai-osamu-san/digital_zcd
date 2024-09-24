@@ -391,6 +391,7 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 void processData(void){
     // Convert ADC data to float32_t
     for (uint32_t i = 0; i < BUFFER_SIZE; i++)
@@ -409,6 +410,68 @@ void processData(void){
         outputF32[i] -= meanValue;
     }
 
+    // ----------------------------
+    // Zero-Crossing Detection Code
+    // ----------------------------
+
+    float32_t zeroCrossings[BUFFER_SIZE]; // Store indices of zero crossings
+    uint32_t zeroCrossingCount = 0;
+    char msg[50];
+    // Detect zero crossings
+    for (uint32_t i = 1; i < BUFFER_SIZE; i++)
+    {
+        float32_t previousSample = outputF32[i - 1];
+        float32_t currentSample = outputF32[i];
+
+        // Check for zero crossing (sign change)
+        if ((previousSample >= 0.0f && currentSample < 0.0f) ||
+            (previousSample < 0.0f && currentSample >= 0.0f))
+        {
+            zeroCrossings[zeroCrossingCount++] = (float32_t)i;
+        }
+    }
+
+    // Ensure we have detected enough zero crossings
+    if (zeroCrossingCount < 3) // Need at least 3 zero crossings to calculate one full period
+    {
+        snprintf(msg, sizeof(msg), "Insufficient zero crossings detected.\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+        return;
+    }
+
+    // Calculate periods between zero crossings (full periods)
+    float32_t periods[BUFFER_SIZE / 2];
+    uint32_t periodCount = 0;
+
+    for (uint32_t i = 2; i < zeroCrossingCount; i += 2)
+    {
+        float32_t periodSamples = zeroCrossings[i] - zeroCrossings[i - 2];
+        periods[periodCount++] = periodSamples;
+    }
+
+    // Ensure we have at least one period
+    if (periodCount == 0)
+    {
+        snprintf(msg, sizeof(msg), "No complete periods detected.\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+        return;
+    }
+
+    // Compute average period
+    float32_t totalPeriod = 0.0f;
+    for (uint32_t i = 0; i < periodCount; i++)
+    {
+        totalPeriod += periods[i];
+    }
+    float32_t averagePeriodSamples = totalPeriod / (float32_t)periodCount;
+
+    // Calculate frequency from zero crossings
+    float32_t zeroCrossingFrequency = (float32_t)FS / averagePeriodSamples;
+
+    // Send zero-crossing frequency over UART
+    snprintf(msg, sizeof(msg), "Zero-Crossing Frequency: %.2f Hz\r\n", zeroCrossingFrequency);
+    HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
+
     // Perform FFT
     arm_rfft_fast_f32(&S_RFFT, outputF32, fftOutput, 0);
 
@@ -425,9 +488,8 @@ void processData(void){
 
     // Calculate peak frequency
     float32_t peakFrequency = frequencyResolution * (float32_t)maxIndex;
-
     // Send peak frequency over UART
-    char msg[50];
+    
     snprintf(msg, sizeof(msg), "Peak Frequency: %.2f Hz\r\n", peakFrequency);
     HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 } 
