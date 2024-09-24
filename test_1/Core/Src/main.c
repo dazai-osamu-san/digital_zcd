@@ -21,7 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
 #include "stdint.h"
 #include "arm_math.h"
 /* USER CODE END Includes */
@@ -41,8 +40,6 @@ uint16_t adcBuffer[BUFFER_SIZE];
 static float32_t inputF32[BUFFER_SIZE];
 static float32_t outputF32[BUFFER_SIZE];
 static float32_t firStateF32[BUFFER_SIZE + NUM_TAPS - 1];
-
-
 static float32_t fftOutput[BUFFER_SIZE];
 static float32_t fftMag[BUFFER_SIZE / 2]; 
 
