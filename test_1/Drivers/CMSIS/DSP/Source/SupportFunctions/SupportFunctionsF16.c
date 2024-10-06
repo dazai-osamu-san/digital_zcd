@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 
-/* #include "arm_copy_f16.c"
+#include "arm_copy_f16.c"
 #include "arm_fill_f16.c"
 #include "arm_f16_to_q15.c"
 #include "arm_f16_to_float.c"
@@ -34,4 +34,3 @@
 #include "arm_float_to_f16.c"
 #include "arm_weighted_sum_f16.c"
 #include "arm_barycenter_f16.c"
- */

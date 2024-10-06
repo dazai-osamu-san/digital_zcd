@@ -414,10 +414,11 @@ void processData(void){
     // Zero-Crossing Detection Code
     // ----------------------------
 
-    float32_t zeroCrossings[BUFFER_SIZE]; // Store indices of zero crossings
+    float32_t zeroCrossingTimes[BUFFER_SIZE]; // Store interpolated zero-crossing times
     uint32_t zeroCrossingCount = 0;
-    char msg[50];
-    // Detect zero crossings
+    char msg[100];
+
+    // Detect zero crossings with linear interpolation
     for (uint32_t i = 1; i < BUFFER_SIZE; i++)
     {
         float32_t previousSample = outputF32[i - 1];
@@ -427,7 +428,17 @@ void processData(void){
         if ((previousSample >= 0.0f && currentSample < 0.0f) ||
             (previousSample < 0.0f && currentSample >= 0.0f))
         {
-            zeroCrossings[zeroCrossingCount++] = (float32_t)i;
+            // Linear interpolation to estimate zero-crossing time
+            float32_t delta = 0.0f;
+            float32_t slope = currentSample - previousSample;
+            if (slope != 0.0f)
+            {
+                delta = -previousSample / slope;
+            }
+            // If slope is zero, delta remains 0
+
+            float32_t zeroCrossingTime = (i - 1) + delta; // Fractional index
+            zeroCrossingTimes[zeroCrossingCount++] = zeroCrossingTime;
         }
     }
 
@@ -445,7 +456,7 @@ void processData(void){
 
     for (uint32_t i = 2; i < zeroCrossingCount; i += 2)
     {
-        float32_t periodSamples = zeroCrossings[i] - zeroCrossings[i - 2];
+        float32_t periodSamples = zeroCrossingTimes[i] - zeroCrossingTimes[i - 2];
         periods[periodCount++] = periodSamples;
     }
 
@@ -468,8 +479,24 @@ void processData(void){
     // Calculate frequency from zero crossings
     float32_t zeroCrossingFrequency = (float32_t)FS / averagePeriodSamples;
 
-    // Send zero-crossing frequency over UART
-    snprintf(msg, sizeof(msg), "Zero-Crossing Frequency: %.2f Hz\r\n", zeroCrossingFrequency);
+    // -------------------------------------------
+    // Circular Buffer to Average Last 4 Frequency Samples
+    // -------------------------------------------
+
+    #define FREQ_BUFFER_SIZE 4
+    static float32_t frequencyBuffer[FREQ_BUFFER_SIZE] = {0};
+    static uint32_t frequencyIndex = 0;
+
+    // Update frequency buffer (circular buffer)
+    frequencyBuffer[frequencyIndex] = zeroCrossingFrequency;
+    frequencyIndex = (frequencyIndex + 1) % FREQ_BUFFER_SIZE; // Wrap around after reaching buffer size
+
+    // Compute mean frequency using CMSIS-DSP function
+    float32_t meanFrequency = 0.0f;
+    arm_mean_f32(frequencyBuffer, FREQ_BUFFER_SIZE, &meanFrequency);
+
+    // Send mean frequency over UART
+    snprintf(msg, sizeof(msg), "Mean Frequency: %.2f Hz\r\n", meanFrequency);
     HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
     // Perform FFT

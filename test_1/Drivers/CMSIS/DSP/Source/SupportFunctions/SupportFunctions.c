@@ -26,7 +26,7 @@
  * limitations under the License.
  */
 
-/* #include "arm_barycenter_f32.c"
+#include "arm_barycenter_f32.c"
 #include "arm_bitonic_sort_f32.c"
 #include "arm_bubble_sort_f32.c"
 #include "arm_copy_f32.c"
@@ -61,4 +61,3 @@
 #include "arm_q7_to_float.c"
 #include "arm_q7_to_q15.c"
 #include "arm_q7_to_q31.c"
- */
