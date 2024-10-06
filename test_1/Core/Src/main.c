@@ -34,7 +34,7 @@
 /* USER CODE BEGIN PD */
 #define BUFFER_SIZE 2048
 #define NUM_TAPS 311
-#define FS 8000
+#define FS  12800.4878
 uint16_t adcBuffer[BUFFER_SIZE];
 
 static float32_t inputF32[BUFFER_SIZE];
@@ -483,7 +483,7 @@ void processData(void){
     // Circular Buffer to Average Last 4 Frequency Samples
     // -------------------------------------------
 
-    #define FREQ_BUFFER_SIZE 4
+    #define FREQ_BUFFER_SIZE 10
     static float32_t frequencyBuffer[FREQ_BUFFER_SIZE] = {0};
     static uint32_t frequencyIndex = 0;
 
@@ -496,7 +496,7 @@ void processData(void){
     arm_mean_f32(frequencyBuffer, FREQ_BUFFER_SIZE, &meanFrequency);
 
     // Send mean frequency over UART
-    snprintf(msg, sizeof(msg), "Mean Frequency: %.2f Hz\r\n", meanFrequency);
+    snprintf(msg, sizeof(msg), "Mean Frequency: %.2f Hz\r\n\n", meanFrequency);
     HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
     // Perform FFT
@@ -695,9 +695,9 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 20-1;
+  htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 525-1;
+  htim2.Init.Period = 6561;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
